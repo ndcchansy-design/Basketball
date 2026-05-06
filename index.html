@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>業餘籃球戰術大腦 Pro Max - 修正版</title>
+    <title>業餘籃球戰術大腦 Pro Max - 終極擬真版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -31,21 +31,25 @@
         .defender-node {
             width: 1.5rem; height: 1.5rem; background-color: #ef4444; border-radius: 4px; display: flex; align-items: center; justify-content: center;
             color: white; font-size: 0.7rem; font-weight: bold; border: 1px solid #b91c1c; z-index: 15;
+            transition: all 0.3s ease;
         }
         .ball-node {
-            width: 0.8rem; height: 0.8rem; background-color: #f97316; border-radius: 9999px; border: 1px solid #c2410c; z-index: 30;
+            width: 0.9rem; height: 0.9rem; background-color: #f97316; border-radius: 9999px; 
+            border: 2px solid #fff; z-index: 30; box-shadow: 0 2px 4px rgba(0,0,0,0.4);
         }
 
-        /* 掩護符號 (擋拆牆) */
+        /* 強化版掩護符號 (Screen Indicator) */
         .screen-indicator {
-            width: 30px; height: 8px; background: repeating-linear-gradient(45deg, #eab308, #eab308 5px, #000 5px, #000 10px);
-            border-radius: 2px; z-index: 18; opacity: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            width: 40px; height: 12px; background-color: #f59e0b; border: 2px solid #92400e;
+            border-radius: 6px; z-index: 18; opacity: 0; box-shadow: 0 0 12px rgba(245, 158, 11, 0.9);
+        }
+        .screen-indicator::before {
+            content: 'SCREEN'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+            font-size: 10px; font-weight: 900; color: #92400e; background: rgba(255,255,255,0.9);
+            padding: 1px 6px; border-radius: 4px; letter-spacing: 0.5px; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
 
-        /* ================= 戰術動畫基礎位置 (已修正 Y 軸顛倒問題) ================= */
-        /* 籃框在 top: 8%，所以 PG 應該在 top: 85% (弧頂)，中鋒在 top: 25% (禁區) */
-        
-        /* 高位擋拆 (PR) 初始站位 */
+        /* ================= 戰術動畫基礎位置 ================= */
         .court-container[data-tactic^="pr"] .o1 { left: 50%; top: 85%; } .court-container[data-tactic^="pr"] .x1 { left: 50%; top: 75%; }
         .court-container[data-tactic^="pr"] .o2 { left: 15%; top: 50%; } .court-container[data-tactic^="pr"] .x2 { left: 22%; top: 45%; }
         .court-container[data-tactic^="pr"] .o3 { left: 85%; top: 50%; } .court-container[data-tactic^="pr"] .x3 { left: 78%; top: 45%; }
@@ -53,7 +57,6 @@
         .court-container[data-tactic^="pr"] .o5 { left: 50%; top: 25%; } .court-container[data-tactic^="pr"] .x5 { left: 50%; top: 15%; }
         .court-container[data-tactic^="pr"] .ball-node { left: 50%; top: 83%; }
 
-        /* 內外結合 (IO) 初始站位 */
         .court-container[data-tactic^="io"] .o1 { left: 50%; top: 85%; } .court-container[data-tactic^="io"] .x1 { left: 50%; top: 75%; }
         .court-container[data-tactic^="io"] .o2 { left: 85%; top: 50%; } .court-container[data-tactic^="io"] .x2 { left: 78%; top: 45%; }
         .court-container[data-tactic^="io"] .o3 { left: 15%; top: 50%; } .court-container[data-tactic^="io"] .x3 { left: 22%; top: 45%; }
@@ -61,7 +64,6 @@
         .court-container[data-tactic^="io"] .o5 { left: 75%; top: 30%; } .court-container[data-tactic^="io"] .x5 { left: 68%; top: 25%; }
         .court-container[data-tactic^="io"] .ball-node { left: 50%; top: 83%; }
 
-        /* 牛角戰術 (HN) 初始站位 */
         .court-container[data-tactic^="hn"] .o1 { left: 50%; top: 85%; } .court-container[data-tactic^="hn"] .x1 { left: 50%; top: 75%; }
         .court-container[data-tactic^="hn"] .o2 { left: 10%; top: 20%; } .court-container[data-tactic^="hn"] .x2 { left: 20%; top: 25%; }
         .court-container[data-tactic^="hn"] .o3 { left: 90%; top: 20%; } .court-container[data-tactic^="hn"] .x3 { left: 80%; top: 25%; }
@@ -69,94 +71,140 @@
         .court-container[data-tactic^="hn"] .o5 { left: 65%; top: 45%; } .court-container[data-tactic^="hn"] .x5 { left: 65%; top: 35%; }
         .court-container[data-tactic^="hn"] .ball-node { left: 50%; top: 83%; }
 
-        /* ================= 動畫定義 (配合修正後的座標) ================= */
+        /* ================= 動畫定義 (全場連動防守 + 持球軌跡修正) ================= */
         
-        /* PR v1: 控衛切入 */
-        @keyframes pr1-o5 { 0%, 100% { left: 50%; top: 25%; } 15%, 35% { left: 55%; top: 75%; } 60%, 80% { left: 50%; top: 25%; } }
-        @keyframes pr1-screen { 0%, 14% { opacity: 0; } 15%, 30% { opacity: 1; left: 52%; top: 75%; transform: translate(-50%, -50%) rotate(10deg); } 31%, 100% { opacity: 0; } }
-        @keyframes pr1-o1 { 0%, 15% { left: 50%; top: 85%; } 30%, 40% { left: 65%; top: 35%; } 55%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 85%; } }
-        @keyframes pr1-x1 { 0%, 15% { left: 50%; top: 75%; } 25%, 40% { left: 45%; top: 65%; } 60%, 100% { left: 50%; top: 75%; } } 
-        @keyframes pr1-ball { 0%, 15% { left: 50%; top: 83%; } 30%, 40% { left: 67%; top: 37%; } 55%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 83%; } }
-        .court-container[data-tactic="pr_v1"] .o5 { animation: pr1-o5 6s infinite; }
-        .court-container[data-tactic="pr_v1"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        /* PR v1: 控衛切入 (全隊連動) */
+        @keyframes pr1-o1 { 0%,10%{left:50%;top:85%} 25%,45%{left:65%;top:35%} 50%,80%{left:50%;top:15%} 100%{left:50%;top:85%} }
+        @keyframes pr1-ball { 0%,10%{left:50%;top:83%} 25%,45%{left:67%;top:37%} 50%,80%{left:50%;top:15%} 100%{left:50%;top:83%} } /* 球完美跟隨 O1 */
+        @keyframes pr1-screen { 0%,14%{opacity:0} 15%,30%{opacity:1; left:52%; top:75%; transform:translate(-50%, -50%) rotate(15deg)} 31%,100%{opacity:0} }
+        @keyframes pr1-o5 { 0%,100%{left:50%;top:25%} 15%,30%{left:55%;top:75%} 45%,80%{left:50%;top:25%} }
+        @keyframes pr1-x1 { 0%,10%{left:50%;top:75%} 15%,30%{left:52%;top:72%} 40%,80%{left:55%;top:35%} 100%{left:50%;top:75%} } /* 被擋住後苦追 */
+        @keyframes pr1-x5 { 0%,10%{left:50%;top:15%} 25%,45%{left:50%;top:25%} 50%,80%{left:50%;top:15%} 100%{left:50%;top:15%} } /* 沉退護框後干擾上籃 */
+        @keyframes pr1-x2 { 0%,10%{left:22%;top:45%} 25%,80%{left:28%;top:45%} 100%{left:22%;top:45%} } /* 強側假協防 (Stunt) */
+        @keyframes pr1-x3 { 0%,10%{left:78%;top:45%} 25%,45%{left:60%;top:35%} 50%,80%{left:78%;top:45%} 100%{left:78%;top:45%} } /* 弱側沉退到罰球線協防，再撲回 */
+        @keyframes pr1-x4 { 0%,10%{left:25%;top:25%} 25%,80%{left:35%;top:25%} 100%{left:25%;top:25%} } /* 弱側底角防守者往禁區縮 */
+        
         .court-container[data-tactic="pr_v1"] .o1 { animation: pr1-o1 6s infinite; }
-        .court-container[data-tactic="pr_v1"] .x1 { animation: pr1-x1 6s infinite; }
         .court-container[data-tactic="pr_v1"] .ball-node { animation: pr1-ball 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .o5 { animation: pr1-o5 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .x1 { animation: pr1-x1 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .x5 { animation: pr1-x5 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .x2 { animation: pr1-x2 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .x3 { animation: pr1-x3 6s infinite; }
+        .court-container[data-tactic="pr_v1"] .x4 { animation: pr1-x4 6s infinite; }
 
         /* PR v2: 中鋒順下 */
-        @keyframes pr2-o1 { 0%, 15% { left: 50%; top: 85%; } 30%, 80% { left: 70%; top: 65%; } 100% { left: 50%; top: 85%; } }
-        @keyframes pr2-x1 { 0%, 15% { left: 50%; top: 75%; } 30%, 80% { left: 65%; top: 65%; } 100% { left: 50%; top: 75%; } }
-        @keyframes pr2-x5 { 0%, 15% { left: 50%; top: 15%; } 30%, 80% { left: 62%; top: 30%; } 100% { left: 50%; top: 15%; } } 
-        @keyframes pr2-o5 { 0%, 100% { left: 50%; top: 25%; } 15%, 25% { left: 55%; top: 75%; } 45%, 80% { left: 50%; top: 15%; } } 
-        @keyframes pr2-ball { 0%, 15% { left: 50%; top: 83%; } 30%, 40% { left: 72%; top: 65%; } 50%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 83%; } }
-        .court-container[data-tactic="pr_v2"] .o5 { animation: pr2-o5 6s infinite; }
-        .court-container[data-tactic="pr_v2"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        @keyframes pr2-o1 { 0%,10%{left:50%;top:85%} 25%,80%{left:70%;top:65%} 100%{left:50%;top:85%} }
+        @keyframes pr2-ball { 0%,10%{left:50%;top:83%} 25%,35%{left:68%;top:63%} 45%,80%{left:50%;top:15%} 100%{left:50%;top:83%} } /* 傳球給順下的 O5 */
+        @keyframes pr2-o5 { 0%,100%{left:50%;top:25%} 15%,25%{left:55%;top:75%} 40%,80%{left:50%;top:15%} }
+        @keyframes pr2-x1 { 0%,10%{left:50%;top:75%} 25%,80%{left:65%;top:65%} 100%{left:50%;top:75%} }
+        @keyframes pr2-x5 { 0%,10%{left:50%;top:15%} 25%,40%{left:62%;top:60%} 50%,80%{left:50%;top:20%} 100%{left:50%;top:15%} } /* 換防 O1，再回追 O5 */
+        @keyframes pr2-x3 { 0%,10%{left:78%;top:45%} 30%,50%{left:60%;top:35%} 60%,80%{left:78%;top:45%} 100%{left:78%;top:45%} } /* 弱側防守者 Tag (碰撞) 順下中鋒 */
+        
         .court-container[data-tactic="pr_v2"] .o1 { animation: pr2-o1 6s infinite; }
+        .court-container[data-tactic="pr_v2"] .ball-node { animation: pr2-ball 6s infinite; }
+        .court-container[data-tactic="pr_v2"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        .court-container[data-tactic="pr_v2"] .o5 { animation: pr2-o5 6s infinite; }
         .court-container[data-tactic="pr_v2"] .x1 { animation: pr2-x1 6s infinite; }
         .court-container[data-tactic="pr_v2"] .x5 { animation: pr2-x5 6s infinite; }
-        .court-container[data-tactic="pr_v2"] .ball-node { animation: pr2-ball 6s infinite; }
+        .court-container[data-tactic="pr_v2"] .x3 { animation: pr2-x3 6s infinite; }
 
         /* PR v3: 射手埋伏 */
-        @keyframes pr3-o1 { 0%, 15% { left: 50%; top: 85%; } 30%, 80% { left: 65%; top: 45%; } 100% { left: 50%; top: 85%; } }
-        @keyframes pr3-x3 { 0%, 15% { left: 78%; top: 45%; } 30%, 80% { left: 65%; top: 35%; } 100% { left: 78%; top: 45%; } } 
-        @keyframes pr3-ball { 0%, 15% { left: 50%; top: 83%; } 30%, 40% { left: 67%; top: 43%; } 50%, 80% { left: 85%; top: 50%; } 100% { left: 50%; top: 83%; } }
-        .court-container[data-tactic="pr_v3"] .o5 { animation: pr1-o5 6s infinite; }
-        .court-container[data-tactic="pr_v3"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        @keyframes pr3-o1 { 0%,10%{left:50%;top:85%} 25%,80%{left:65%;top:45%} 100%{left:50%;top:85%} }
+        @keyframes pr3-ball { 0%,10%{left:50%;top:83%} 25%,35%{left:63%;top:43%} 45%,80%{left:85%;top:50%} 100%{left:50%;top:83%} } /* 切入後分球給 O3 */
+        @keyframes pr3-x3 { 0%,10%{left:78%;top:45%} 25%,40%{left:68%;top:45%} 50%,80%{left:82%;top:48%} 100%{left:78%;top:45%} } /* 重度協防切入，然後撲防射手 (Close out) */
+        @keyframes pr3-x2 { 0%,10%{left:22%;top:45%} 25%,80%{left:40%;top:45%} 100%{left:22%;top:45%} } /* 弱側輪轉 */
+        
         .court-container[data-tactic="pr_v3"] .o1 { animation: pr3-o1 6s infinite; }
-        .court-container[data-tactic="pr_v3"] .x3 { animation: pr3-x3 6s infinite; }
         .court-container[data-tactic="pr_v3"] .ball-node { animation: pr3-ball 6s infinite; }
+        .court-container[data-tactic="pr_v3"] .screen-indicator { animation: pr1-screen 6s infinite; }
+        .court-container[data-tactic="pr_v3"] .o5 { animation: pr1-o5 6s infinite; }
+        .court-container[data-tactic="pr_v3"] .x3 { animation: pr3-x3 6s infinite; }
+        .court-container[data-tactic="pr_v3"] .x2 { animation: pr3-x2 6s infinite; }
 
         /* IO v1: 低位強打 */
-        @keyframes io1-ball { 0%, 10% { left: 50%; top: 83%; } 25%, 80% { left: 75%; top: 30%; } 100% { left: 50%; top: 83%; } }
-        @keyframes io1-o5 { 0%, 25% { left: 75%; top: 30%; } 45%, 80% { left: 55%; top: 15%; } 100% { left: 75%; top: 30%; } } 
-        @keyframes io1-x5 { 0%, 25% { left: 68%; top: 25%; } 45%, 80% { left: 50%; top: 10%; } 100% { left: 68%; top: 25%; } }
+        @keyframes io1-ball { 0%,10%{left:50%;top:83%} 20%,35%{left:75%;top:30%} 45%,80%{left:55%;top:15%} 100%{left:50%;top:83%} } /* 球傳低位，跟著 O5 單打 */
+        @keyframes io1-o5 { 0%,20%{left:75%;top:30%} 45%,80%{left:55%;top:15%} 100%{left:75%;top:30%} } 
+        @keyframes io1-x5 { 0%,20%{left:68%;top:25%} 45%,80%{left:50%;top:10%} 100%{left:68%;top:25%} } /* 被頂開 */
+        @keyframes io1-x1 { 0%,15%{left:50%;top:75%} 25%,80%{left:55%;top:65%} 100%{left:50%;top:75%} } /* 視線轉向強側 */
+        @keyframes io1-x3 { 0%,15%{left:22%;top:45%} 25%,80%{left:40%;top:35%} 100%{left:22%;top:45%} } /* 弱側沉退 */
+        
         .court-container[data-tactic="io_v1"] .ball-node { animation: io1-ball 6s infinite; }
         .court-container[data-tactic="io_v1"] .o5 { animation: io1-o5 6s infinite; }
         .court-container[data-tactic="io_v1"] .x5 { animation: io1-x5 6s infinite; }
+        .court-container[data-tactic="io_v1"] .x1 { animation: io1-x1 6s infinite; }
+        .court-container[data-tactic="io_v1"] .x3 { animation: io1-x3 6s infinite; }
 
-        /* IO v2: 包夾分球三分 (修正漏掉的 o1 移動動畫) */
-        @keyframes io2-o1 { 0%, 15% { left: 50%; top: 85%; } 30%, 80% { left: 30%; top: 75%; } 100% { left: 50%; top: 85%; } } /* PG 傳球後往弱側移動 */
-        @keyframes io2-x2 { 0%, 25% { left: 78%; top: 45%; } 40%, 80% { left: 68%; top: 35%; } 100% { left: 78%; top: 45%; } } /* 防守者去包夾低位 */
-        @keyframes io2-ball { 0%, 10% { left: 50%; top: 83%; } 25%, 45% { left: 73%; top: 32%; } 60%, 80% { left: 85%; top: 50%; } 100% { left: 50%; top: 83%; } } /* 球: 弧頂 -> 低位 -> 側翼三分 */
-        .court-container[data-tactic="io_v2"] .o1 { animation: io2-o1 6s infinite; }
-        .court-container[data-tactic="io_v2"] .x2 { animation: io2-x2 6s infinite; }
+        /* IO v2: 包夾分球三分 (O2 投射) */
+        @keyframes io2-o2 { 0%,20%{left:85%;top:50%} 35%,80%{left:85%;top:65%} 100%{left:85%;top:50%} } /* 射手移動找空檔 */
+        @keyframes io2-ball { 0%,10%{left:50%;top:83%} 20%,35%{left:73%;top:32%} 45%,80%{left:85%;top:65%} 100%{left:50%;top:83%} } /* 弧頂 -> 低位 -> 側翼三分 */
+        @keyframes io2-x2 { 0%,15%{left:78%;top:45%} 25%,45%{left:70%;top:30%} 50%,80%{left:78%;top:55%} 100%{left:78%;top:45%} } /* 沉退包夾 O5，再撲防 O2 */
+        @keyframes io2-x1 { 0%,15%{left:50%;top:75%} 25%,80%{left:60%;top:65%} 100%{left:50%;top:75%} } /* 輪轉補位 */
+        @keyframes io2-x3 { 0%,15%{left:22%;top:45%} 25%,80%{left:45%;top:35%} 100%{left:22%;top:45%} } /* 弱側完全沉退保護禁區 */
+        
+        .court-container[data-tactic="io_v2"] .o2 { animation: io2-o2 6s infinite; }
         .court-container[data-tactic="io_v2"] .ball-node { animation: io2-ball 6s infinite; }
+        .court-container[data-tactic="io_v2"] .x2 { animation: io2-x2 6s infinite; }
+        .court-container[data-tactic="io_v2"] .x1 { animation: io2-x1 6s infinite; }
+        .court-container[data-tactic="io_v2"] .x3 { animation: io2-x3 6s infinite; }
 
         /* IO v3: 弱側溜底線 */
-        @keyframes io3-o4 { 0%, 30% { left: 15%; top: 20%; } 50%, 80% { left: 50%; top: 15%; } 100% { left: 15%; top: 20%; } } 
-        @keyframes io3-x4 { 0%, 30% { left: 25%; top: 25%; } 60%, 80% { left: 40%; top: 25%; } 100% { left: 25%; top: 25%; } } 
-        @keyframes io3-ball { 0%, 10% { left: 50%; top: 83%; } 25%, 45% { left: 75%; top: 30%; } 60%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 83%; } }
+        @keyframes io3-ball { 0%,10%{left:50%;top:83%} 20%,35%{left:75%;top:30%} 45%,80%{left:50%;top:15%} 100%{left:50%;top:83%} } /* 傳低位 -> 地板球給空切者 */
+        @keyframes io3-o4 { 0%,25%{left:15%;top:20%} 40%,80%{left:50%;top:15%} 100%{left:15%;top:20%} } 
+        @keyframes io3-x4 { 0%,25%{left:25%;top:25%} 30%,40%{left:35%;top:25%} 50%,80%{left:45%;top:15%} 100%{left:25%;top:25%} } /* 看球不看人 (Ball watching)，漏人後苦追 */
+        @keyframes io3-x1 { 0%,15%{left:50%;top:75%} 25%,80%{left:60%;top:65%} 100%{left:50%;top:75%} }
+        
+        .court-container[data-tactic="io_v3"] .ball-node { animation: io3-ball 6s infinite; }
         .court-container[data-tactic="io_v3"] .o4 { animation: io3-o4 6s infinite; }
         .court-container[data-tactic="io_v3"] .x4 { animation: io3-x4 6s infinite; }
-        .court-container[data-tactic="io_v3"] .ball-node { animation: io3-ball 6s infinite; }
+        .court-container[data-tactic="io_v3"] .x1 { animation: io3-x1 6s infinite; }
 
         /* HN v1: 雙掩護突破 */
-        @keyframes hn1-screen1 { 0%, 10% { opacity: 0; } 15%, 35% { opacity: 1; left: 35%; top: 50%; transform: translate(-50%, -50%) rotate(-45deg); } 40%, 100% { opacity: 0; } }
-        @keyframes hn1-screen2 { 0%, 10% { opacity: 0; } 15%, 35% { opacity: 1; left: 65%; top: 50%; transform: translate(-50%, -50%) rotate(45deg); } 40%, 100% { opacity: 0; } }
-        @keyframes hn1-o1 { 0%, 15% { left: 50%; top: 85%; } 30%, 40% { left: 50%; top: 50%; } 55%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 85%; } }
-        @keyframes hn1-ball { 0%, 15% { left: 50%; top: 83%; } 30%, 40% { left: 50%; top: 48%; } 55%, 80% { left: 50%; top: 15%; } 100% { left: 50%; top: 83%; } }
-        .court-container[data-tactic="hn_v1"] .screen-indicator.s1 { animation: hn1-screen1 6s infinite; }
-        .court-container[data-tactic="hn_v1"] .screen-indicator.s2 { animation: hn1-screen2 6s infinite; }
+        @keyframes hn1-o1 { 0%,10%{left:50%;top:85%} 25%,45%{left:50%;top:50%} 50%,80%{left:50%;top:15%} 100%{left:50%;top:85%} }
+        @keyframes hn1-ball { 0%,10%{left:50%;top:83%} 25%,45%{left:50%;top:48%} 50%,80%{left:50%;top:15%} 100%{left:50%;top:83%} } /* 球完美跟隨中路突破 */
+        @keyframes hn1-screen1 { 0%,10%{opacity:0} 15%,35%{opacity:1; left:35%; top:50%; transform:translate(-50%, -50%) rotate(-45deg)} 40%,100%{opacity:0} }
+        @keyframes hn1-screen2 { 0%,10%{opacity:0} 15%,35%{opacity:1; left:65%; top:50%; transform:translate(-50%, -50%) rotate(45deg)} 40%,100%{opacity:0} }
+        @keyframes hn1-x1 { 0%,10%{left:50%;top:75%} 15%,80%{left:50%;top:55%} 100%{left:50%;top:75%} } /* 被雙掩護卡死 */
+        @keyframes hn1-x2 { 0%,10%{left:20%;top:25%} 25%,80%{left:35%;top:20%} 100%{left:20%;top:25%} } /* 底角防守者內縮協防中路 (Pinch) */
+        @keyframes hn1-x3 { 0%,10%{left:80%;top:25%} 25%,80%{left:65%;top:20%} 100%{left:80%;top:25%} } /* 底角防守者內縮協防中路 (Pinch) */
+        @keyframes hn1-x4 { 0%,10%{left:35%;top:35%} 25%,80%{left:45%;top:25%} 100%{left:35%;top:35%} } /* 內線沉退護框 */
+        
         .court-container[data-tactic="hn_v1"] .o1 { animation: hn1-o1 6s infinite; }
         .court-container[data-tactic="hn_v1"] .ball-node { animation: hn1-ball 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .screen-indicator.s1 { animation: hn1-screen1 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .screen-indicator.s2 { animation: hn1-screen2 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .x1 { animation: hn1-x1 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .x2 { animation: hn1-x2 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .x3 { animation: hn1-x3 6s infinite; }
+        .court-container[data-tactic="hn_v1"] .x4 { animation: hn1-x4 6s infinite; }
 
-        /* HN v2: 掩護外彈 */
-        @keyframes hn2-o4 { 0%, 15% { left: 35%; top: 45%; } 30%, 40% { left: 35%; top: 60%; } 55%, 80% { left: 20%; top: 70%; } 100% { left: 35%; top: 45%; } } 
-        @keyframes hn2-x4 { 0%, 15% { left: 35%; top: 35%; } 30%, 80% { left: 45%; top: 45%; } 100% { left: 35%; top: 35%; } } 
-        @keyframes hn2-ball { 0%, 15% { left: 50%; top: 83%; } 30%, 40% { left: 32%; top: 60%; } 55%, 80% { left: 20%; top: 70%; } 100% { left: 50%; top: 83%; } }
+        /* HN v2: 掩護外彈 (Pop) */
+        @keyframes hn2-o1 { 0%,10%{left:50%;top:85%} 25%,45%{left:30%;top:60%} 50%,80%{left:30%;top:60%} 100%{left:50%;top:85%} }
+        @keyframes hn2-ball { 0%,10%{left:50%;top:83%} 25%,35%{left:28%;top:58%} 45%,80%{left:20%;top:70%} 100%{left:50%;top:83%} } /* 傳給外彈的 O4 */
+        @keyframes hn2-o4 { 0%,15%{left:35%;top:45%} 25%,35%{left:35%;top:55%} 45%,80%{left:20%;top:70%} 100%{left:35%;top:45%} } 
+        @keyframes hn2-x4 { 0%,15%{left:35%;top:35%} 25%,35%{left:30%;top:50%} 45%,80%{left:25%;top:65%} 100%{left:35%;top:35%} } /* 幫忙防守切入，然後撲防外彈 (Close out) */
+        @keyframes hn2-x1 { 0%,10%{left:50%;top:75%} 25%,80%{left:40%;top:65%} 100%{left:50%;top:75%} }
+        
+        .court-container[data-tactic="hn_v2"] .o1 { animation: hn2-o1 6s infinite; }
+        .court-container[data-tactic="hn_v2"] .ball-node { animation: hn2-ball 6s infinite; }
         .court-container[data-tactic="hn_v2"] .screen-indicator.s1 { animation: hn1-screen1 6s infinite; }
-        .court-container[data-tactic="hn_v2"] .o1 { animation: hn1-o1 6s infinite; }
         .court-container[data-tactic="hn_v2"] .o4 { animation: hn2-o4 6s infinite; }
         .court-container[data-tactic="hn_v2"] .x4 { animation: hn2-x4 6s infinite; }
-        .court-container[data-tactic="hn_v2"] .ball-node { animation: hn2-ball 6s infinite; }
+        .court-container[data-tactic="hn_v2"] .x1 { animation: hn2-x1 6s infinite; }
 
         /* HN v3: 高低位連線 */
-        @keyframes hn3-ball { 0%, 10% { left: 50%; top: 83%; } 25%, 40% { left: 65%; top: 45%; } 55%, 80% { left: 35%; top: 15%; } 100% { left: 50%; top: 83%; } }
-        @keyframes hn3-o4 { 0%, 25% { left: 35%; top: 45%; } 45%, 80% { left: 35%; top: 15%; } 100% { left: 35%; top: 45%; } } 
-        @keyframes hn3-x4 { 0%, 25% { left: 35%; top: 35%; } 45%, 80% { left: 35%; top: 25%; } 100% { left: 35%; top: 35%; } }
+        @keyframes hn3-ball { 0%,10%{left:50%;top:83%} 20%,35%{left:35%;top:45%} 45%,80%{left:65%;top:15%} 100%{left:50%;top:83%} } /* O1 -> O4 -> O5 */
+        @keyframes hn3-o5 { 0%,20%{left:65%;top:45%} 35%,80%{left:65%;top:15%} 100%{left:65%;top:45%} } /* 沉底要位 */
+        @keyframes hn3-x5 { 0%,20%{left:65%;top:35%} 35%,80%{left:65%;top:10%} 100%{left:65%;top:35%} } /* 被卡在身後 */
+        @keyframes hn3-x1 { 0%,15%{left:50%;top:75%} 25%,80%{left:45%;top:60%} 100%{left:50%;top:75%} }
+        @keyframes hn3-x2 { 0%,15%{left:20%;top:25%} 25%,80%{left:35%;top:25%} 100%{left:20%;top:25%} } /* 內縮防守高低位 */
+        
         .court-container[data-tactic="hn_v3"] .ball-node { animation: hn3-ball 6s infinite; }
-        .court-container[data-tactic="hn_v3"] .o4 { animation: hn3-o4 6s infinite; }
-        .court-container[data-tactic="hn_v3"] .x4 { animation: hn3-x4 6s infinite; }
+        .court-container[data-tactic="hn_v3"] .o5 { animation: hn3-o5 6s infinite; }
+        .court-container[data-tactic="hn_v3"] .x5 { animation: hn3-x5 6s infinite; }
+        .court-container[data-tactic="hn_v3"] .x1 { animation: hn3-x1 6s infinite; }
+        .court-container[data-tactic="hn_v3"] .x2 { animation: hn3-x2 6s infinite; }
 
         .var-btn.active { background-color: #f97316; color: white; border-color: #f97316; }
         .var-btn { background-color: white; color: #64748b; border-color: #cbd5e1; }
@@ -169,8 +217,8 @@
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-basketball fa-2x text-orange-500"></i>
                 <div>
-                    <h1 class="text-2xl font-bold tracking-wider">業餘籃球戰術大腦 <span class="text-orange-500">Pro Max (修正版)</span></h1>
-                    <p class="text-slate-400 text-sm">已修正半場座標與跑位動畫同步</p>
+                    <h1 class="text-2xl font-bold tracking-wider">業餘籃球戰術大腦 <span class="text-orange-500">Pro Max (終極擬真版)</span></h1>
+                    <p class="text-slate-400 text-sm">已修正持球軌跡、強化掩護視覺、新增全場防守連動 (Shell Drill)</p>
                 </div>
             </div>
         </div>
@@ -247,7 +295,7 @@
                 <!-- 右側：戰術板 -->
                 <div class="w-full lg:w-[450px] flex flex-col items-center">
                     <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chalkboard text-slate-700"></i> 動態圖解 (含掩護符號)
+                        <i class="fa-solid fa-chalkboard text-slate-700"></i> 動態圖解 (全場連動防守)
                     </h3>
                     <div id="tactic-board" class="court-container w-full rounded-lg" data-tactic="pr_v1">
                         <!-- 籃框與禁區 (畫面上方) -->

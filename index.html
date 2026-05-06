@@ -3,204 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>業餘籃球戰術大腦 (Amateur Hoops IQ)</title>
-    <!-- 引入 Tailwind CSS -->
+    <title>業餘籃球戰術大腦 Pro Max</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖標 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* 戰術板與球場樣式 */
+        /* 自訂捲軸與表格樣式 */
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .sticky-col { position: sticky; left: 0; background-color: white; z-index: 10; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); }
+        
+        input[type="number"] { -moz-appearance: textfield; }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* 球場與戰術板 */
         .court-container {
             aspect-ratio: 5 / 4;
             position: relative;
-            background-color: #fff7ed; /* orange-50 */
-            border: 4px solid #1e293b; /* slate-800 */
+            background-color: #fff7ed;
+            border: 4px solid #1e293b;
             overflow: hidden;
             box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
         }
         
+        /* 進攻球員 (圓形) */
         .player-node {
-            position: absolute;
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 9999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: bold;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            border: 2px solid white;
-            transform: translate(-50%, -50%);
-            z-index: 20;
+            position: absolute; width: 1.75rem; height: 1.75rem;
+            border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.7rem; font-weight: bold;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+            border: 2px solid white; transform: translate(-50%, -50%); z-index: 20;
+        }
+
+        /* 防守球員 (方形) */
+        .defender-node {
+            position: absolute; width: 1.5rem; height: 1.5rem;
+            background-color: #ef4444; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.7rem; font-weight: bold;
+            box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.2);
+            border: 1px solid #b91c1c; transform: translate(-50%, -50%); z-index: 15;
         }
 
         .ball-node {
-            position: absolute;
-            width: 1rem;
-            height: 1rem;
-            background-color: #f97316; /* orange-500 */
-            border-radius: 9999px;
-            border: 1px solid #c2410c; /* orange-700 */
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            transform: translate(-50%, -50%);
-            z-index: 30;
+            position: absolute; width: 0.8rem; height: 0.8rem;
+            background-color: #f97316; border-radius: 9999px; border: 1px solid #c2410c;
+            transform: translate(-50%, -50%); z-index: 30;
         }
 
-        /* --- 動畫定義 (Keyframes) --- */
+        /* ================= 戰術動畫 (包含攻防) ================= */
         
-        /* 1. 高位擋拆 (Pick & Roll) - 6秒 */
-        @keyframes pr-p1 { 0%, 20% { left: 50%; top: 20%; } 50%, 100% { left: 65%; top: 35%; } }
-        @keyframes pr-p2 { 0%, 100% { left: 15%; top: 40%; } }
-        @keyframes pr-p3 { 0%, 100% { left: 85%; top: 40%; } }
-        @keyframes pr-p4 { 0%, 100% { left: 15%; top: 85%; } }
-        @keyframes pr-p5 { 0% { left: 50%; top: 80%; } 20% { left: 50%; top: 30%; } 50%, 60% { left: 55%; top: 30%; } 100% { left: 50%; top: 75%; } }
+        /* 1. 高位擋拆 (Pick & Roll) */
+        /* O1運球, O5單擋, X1被擋, X5沉退 */
+        @keyframes pr-o1 { 0%, 20% { left: 50%; top: 20%; } 50%, 100% { left: 65%; top: 35%; } }
+        @keyframes pr-o5 { 0% { left: 50%; top: 80%; } 20% { left: 53%; top: 30%; } 50%, 60% { left: 55%; top: 30%; } 100% { left: 50%; top: 75%; } }
+        @keyframes pr-x1 { 0%, 20% { left: 50%; top: 28%; } 40% { left: 53%; top: 28%; } 60%, 100% { left: 60%; top: 30%; } } /* 被擋住後追趕 */
+        @keyframes pr-x5 { 0%, 10% { left: 50%; top: 70%; } 30%, 50% { left: 58%; top: 40%; } 100% { left: 50%; top: 65%; } } /* 延誤後回撤 */
         @keyframes pr-ball { 0%, 20% { left: 50%; top: 22%; } 50%, 60% { left: 67%; top: 37%; } 100% { left: 50%; top: 75%; } }
+        /* 其他人站位 */
+        @keyframes pr-o2 { 0%, 100% { left: 15%; top: 40%; } } @keyframes pr-x2 { 0%, 100% { left: 22%; top: 45%; } }
+        @keyframes pr-o3 { 0%, 100% { left: 85%; top: 40%; } } @keyframes pr-x3 { 0%, 100% { left: 78%; top: 45%; } }
+        @keyframes pr-o4 { 0%, 100% { left: 15%; top: 85%; } } @keyframes pr-x4 { 0%, 100% { left: 25%; top: 75%; } }
 
-        .court-container[data-tactic="pick_and_roll"] .p1 { animation: pr-p1 6s ease-in-out infinite; }
-        .court-container[data-tactic="pick_and_roll"] .p2 { animation: pr-p2 6s ease-in-out infinite; }
-        .court-container[data-tactic="pick_and_roll"] .p3 { animation: pr-p3 6s ease-in-out infinite; }
-        .court-container[data-tactic="pick_and_roll"] .p4 { animation: pr-p4 6s ease-in-out infinite; }
-        .court-container[data-tactic="pick_and_roll"] .p5 { animation: pr-p5 6s ease-in-out infinite; }
-        .court-container[data-tactic="pick_and_roll"] .ball-node { animation: pr-ball 6s ease-in-out infinite; }
+        /* 2. 內外結合 (Inside-Out) */
+        /* O5低位要球, X2協防包夾, O5傳給O2三分 */
+        @keyframes pu-o1 { 0%, 100% { left: 50%; top: 20%; } } @keyframes pu-x1 { 0%, 100% { left: 50%; top: 28%; } }
+        @keyframes pu-o5 { 0%, 100% { left: 70%; top: 75%; } } @keyframes pu-x5 { 0%, 100% { left: 65%; top: 70%; } }
+        @keyframes pu-o2 { 0%, 100% { left: 85%; top: 40%; } } 
+        @keyframes pu-x2 { 0%, 20% { left: 78%; top: 45%; } 40%, 60% { left: 68%; top: 65%; } 100% { left: 78%; top: 45%; } } /* 包夾後撲防 */
+        @keyframes pu-ball { 0% { left: 50%; top: 22%; } 20%, 30% { left: 83%; top: 40%; } 50%, 70% { left: 70%; top: 75%; } 100% { left: 83%; top: 40%; } }
+        @keyframes pu-o3 { 0%, 100% { left: 15%; top: 40%; } } @keyframes pu-x3 { 0%, 100% { left: 22%; top: 45%; } }
+        @keyframes pu-o4 { 0%, 100% { left: 15%; top: 85%; } } @keyframes pu-x4 { 0%, 100% { left: 25%; top: 75%; } }
 
-        /* 2. 內外結合 (Post Up) - 6秒 */
-        @keyframes pu-p1 { 0%, 100% { left: 50%; top: 20%; } }
-        @keyframes pu-p2 { 0%, 100% { left: 85%; top: 40%; } }
-        @keyframes pu-p3 { 0%, 100% { left: 15%; top: 40%; } }
-        @keyframes pu-p4 { 0%, 100% { left: 35%; top: 60%; } }
-        @keyframes pu-p5 { 0%, 100% { left: 70%; top: 75%; } }
-        @keyframes pu-ball { 0% { left: 50%; top: 22%; } 20%, 30% { left: 83%; top: 40%; } 50% { left: 70%; top: 75%; } 100% { left: 17%; top: 40%; } }
+        /* 3. 普林斯頓 - 開後門 (Princeton Backdoor) */
+        /* O5高位策應, O1傳球後反跑空切, X1看球不看人被過 */
+        @keyframes pt-o5 { 0%, 100% { left: 50%; top: 45%; } } @keyframes pt-x5 { 0%, 100% { left: 50%; top: 55%; } }
+        @keyframes pt-o1 { 0%, 20% { left: 30%; top: 20%; } 40% { left: 25%; top: 20%; } 70%, 100% { left: 45%; top: 75%; } }
+        @keyframes pt-x1 { 0%, 20% { left: 35%; top: 28%; } 40%, 50% { left: 35%; top: 25%; } 80%, 100% { left: 45%; top: 65%; } } /* 失去位置 */
+        @keyframes pt-ball { 0%, 15% { left: 30%; top: 22%; } 30%, 50% { left: 50%; top: 45%; } 80%, 100% { left: 45%; top: 75%; } }
+        @keyframes pt-o2 { 0%, 100% { left: 85%; top: 40%; } } @keyframes pt-x2 { 0%, 100% { left: 75%; top: 45%; } }
+        @keyframes pt-o3 { 0%, 100% { left: 15%; top: 85%; } } @keyframes pt-x3 { 0%, 100% { left: 25%; top: 75%; } }
+        @keyframes pt-o4 { 0%, 100% { left: 85%; top: 85%; } } @keyframes pt-x4 { 0%, 100% { left: 75%; top: 75%; } }
 
-        .court-container[data-tactic="post_up"] .p1 { animation: pu-p1 6s ease-in-out infinite; }
-        .court-container[data-tactic="post_up"] .p2 { animation: pu-p2 6s ease-in-out infinite; }
-        .court-container[data-tactic="post_up"] .p3 { animation: pu-p3 6s ease-in-out infinite; }
-        .court-container[data-tactic="post_up"] .p4 { animation: pu-p4 6s ease-in-out infinite; }
-        .court-container[data-tactic="post_up"] .p5 { animation: pu-p5 6s ease-in-out infinite; }
-        .court-container[data-tactic="post_up"] .ball-node { animation: pu-ball 6s ease-in-out infinite; }
+        /* 4. 牛角戰術 (Horns) */
+        /* O4,O5站罰球線兩端. O1借O4掩護, O4外彈(Pop), O5順下(Roll) */
+        @keyframes hn-o1 { 0%, 20% { left: 50%; top: 15%; } 50%, 100% { left: 25%; top: 35%; } }
+        @keyframes hn-x1 { 0%, 20% { left: 50%; top: 25%; } 50%, 100% { left: 35%; top: 30%; } }
+        @keyframes hn-o4 { 0%, 20% { left: 35%; top: 45%; } 40% { left: 40%; top: 30%; } 70%, 100% { left: 20%; top: 20%; } } /* Pop */
+        @keyframes hn-x4 { 0%, 20% { left: 35%; top: 55%; } 50%, 100% { left: 30%; top: 25%; } }
+        @keyframes hn-o5 { 0%, 40% { left: 65%; top: 45%; } 70%, 100% { left: 50%; top: 75%; } } /* Roll */
+        @keyframes hn-x5 { 0%, 40% { left: 65%; top: 55%; } 70%, 100% { left: 50%; top: 65%; } }
+        @keyframes hn-ball { 0%, 20% { left: 50%; top: 17%; } 50%, 60% { left: 25%; top: 37%; } 100% { left: 50%; top: 75%; } }
+        @keyframes hn-o2 { 0%, 100% { left: 10%; top: 85%; } } @keyframes hn-x2 { 0%, 100% { left: 20%; top: 75%; } }
+        @keyframes hn-o3 { 0%, 100% { left: 90%; top: 85%; } } @keyframes hn-x3 { 0%, 100% { left: 80%; top: 75%; } }
 
-        /* 3. 切入分球 (Drive & Kick) - 5秒 */
-        @keyframes dk-p1 { 0%, 20% { left: 50%; top: 20%; } 60%, 100% { left: 35%; top: 65%; } }
-        @keyframes dk-p2 { 0%, 100% { left: 85%; top: 40%; } }
-        @keyframes dk-p3 { 0%, 100% { left: 15%; top: 85%; } }
-        @keyframes dk-p4 { 0%, 100% { left: 85%; top: 85%; } }
-        @keyframes dk-p5 { 0%, 100% { left: 65%; top: 75%; } }
-        @keyframes dk-ball { 0%, 20% { left: 50%; top: 22%; } 60%, 70% { left: 35%; top: 65%; } 100% { left: 15%; top: 85%; } }
+        /* 動畫綁定 (簡化版，利用 data-tactic 切換) */
+        .court-container[data-tactic="pick_and_roll"] .o1 { animation: pr-o1 5s infinite; } .court-container[data-tactic="pick_and_roll"] .x1 { animation: pr-x1 5s infinite; }
+        .court-container[data-tactic="pick_and_roll"] .o5 { animation: pr-o5 5s infinite; } .court-container[data-tactic="pick_and_roll"] .x5 { animation: pr-x5 5s infinite; }
+        .court-container[data-tactic="pick_and_roll"] .ball-node { animation: pr-ball 5s infinite; }
+        .court-container[data-tactic="pick_and_roll"] .o2 { animation: pr-o2 5s infinite; } .court-container[data-tactic="pick_and_roll"] .x2 { animation: pr-x2 5s infinite; }
+        .court-container[data-tactic="pick_and_roll"] .o3 { animation: pr-o3 5s infinite; } .court-container[data-tactic="pick_and_roll"] .x3 { animation: pr-x3 5s infinite; }
+        .court-container[data-tactic="pick_and_roll"] .o4 { animation: pr-o4 5s infinite; } .court-container[data-tactic="pick_and_roll"] .x4 { animation: pr-x4 5s infinite; }
 
-        .court-container[data-tactic="drive_and_kick"] .p1 { animation: dk-p1 5s ease-in-out infinite; }
-        .court-container[data-tactic="drive_and_kick"] .p2 { animation: dk-p2 5s ease-in-out infinite; }
-        .court-container[data-tactic="drive_and_kick"] .p3 { animation: dk-p3 5s ease-in-out infinite; }
-        .court-container[data-tactic="drive_and_kick"] .p4 { animation: dk-p4 5s ease-in-out infinite; }
-        .court-container[data-tactic="drive_and_kick"] .p5 { animation: dk-p5 5s ease-in-out infinite; }
-        .court-container[data-tactic="drive_and_kick"] .ball-node { animation: dk-ball 5s ease-in-out infinite; }
+        .court-container[data-tactic="post_up"] .o1 { animation: pu-o1 5s infinite; } .court-container[data-tactic="post_up"] .x1 { animation: pu-x1 5s infinite; }
+        .court-container[data-tactic="post_up"] .o5 { animation: pu-o5 5s infinite; } .court-container[data-tactic="post_up"] .x5 { animation: pu-x5 5s infinite; }
+        .court-container[data-tactic="post_up"] .o2 { animation: pu-o2 5s infinite; } .court-container[data-tactic="post_up"] .x2 { animation: pu-x2 5s infinite; }
+        .court-container[data-tactic="post_up"] .ball-node { animation: pu-ball 5s infinite; }
+        .court-container[data-tactic="post_up"] .o3 { animation: pu-o3 5s infinite; } .court-container[data-tactic="post_up"] .x3 { animation: pu-x3 5s infinite; }
+        .court-container[data-tactic="post_up"] .o4 { animation: pu-o4 5s infinite; } .court-container[data-tactic="post_up"] .x4 { animation: pu-x4 5s infinite; }
+
+        .court-container[data-tactic="princeton"] .o1 { animation: pt-o1 5s infinite; } .court-container[data-tactic="princeton"] .x1 { animation: pt-x1 5s infinite; }
+        .court-container[data-tactic="princeton"] .o5 { animation: pt-o5 5s infinite; } .court-container[data-tactic="princeton"] .x5 { animation: pt-x5 5s infinite; }
+        .court-container[data-tactic="princeton"] .ball-node { animation: pt-ball 5s infinite; }
+        .court-container[data-tactic="princeton"] .o2 { animation: pt-o2 5s infinite; } .court-container[data-tactic="princeton"] .x2 { animation: pt-x2 5s infinite; }
+        .court-container[data-tactic="princeton"] .o3 { animation: pt-o3 5s infinite; } .court-container[data-tactic="princeton"] .x3 { animation: pt-x3 5s infinite; }
+        .court-container[data-tactic="princeton"] .o4 { animation: pt-o4 5s infinite; } .court-container[data-tactic="princeton"] .x4 { animation: pt-x4 5s infinite; }
+
+        .court-container[data-tactic="horns"] .o1 { animation: hn-o1 5s infinite; } .court-container[data-tactic="horns"] .x1 { animation: hn-x1 5s infinite; }
+        .court-container[data-tactic="horns"] .o4 { animation: hn-o4 5s infinite; } .court-container[data-tactic="horns"] .x4 { animation: hn-x4 5s infinite; }
+        .court-container[data-tactic="horns"] .o5 { animation: hn-o5 5s infinite; } .court-container[data-tactic="horns"] .x5 { animation: hn-x5 5s infinite; }
+        .court-container[data-tactic="horns"] .ball-node { animation: hn-ball 5s infinite; }
+        .court-container[data-tactic="horns"] .o2 { animation: hn-o2 5s infinite; } .court-container[data-tactic="horns"] .x2 { animation: hn-x2 5s infinite; }
+        .court-container[data-tactic="horns"] .o3 { animation: hn-o3 5s infinite; } .court-container[data-tactic="horns"] .x3 { animation: hn-x3 5s infinite; }
+
+        /* 其他戰術若未定義專屬動畫，預設套用 Pick & Roll 動畫以防出錯 */
+        .court-container[data-tactic="drive_and_kick"] .o1 { animation: pr-o1 5s infinite; } .court-container[data-tactic="drive_and_kick"] .x1 { animation: pr-x1 5s infinite; }
+        .court-container[data-tactic="drive_and_kick"] .ball-node { animation: pr-ball 5s infinite; }
+        .court-container[data-tactic="motion"] .o1 { animation: pt-o1 5s infinite; } .court-container[data-tactic="motion"] .ball-node { animation: pt-ball 5s infinite; }
+        .court-container[data-tactic="run_and_gun"] .o1 { animation: hn-o1 5s infinite; } .court-container[data-tactic="run_and_gun"] .ball-node { animation: hn-ball 5s infinite; }
+        .court-container[data-tactic="triangle"] .o1 { animation: pu-o1 5s infinite; } .court-container[data-tactic="triangle"] .ball-node { animation: pu-ball 5s infinite; }
+
+        /* 能力條動畫 */
+        .stat-bar { transition: width 1s ease-in-out; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-100 text-slate-800 font-sans pb-12">
 
-    <!-- Header -->
     <header class="bg-slate-900 text-white p-6 shadow-md">
-        <div class="max-w-5xl mx-auto flex items-center gap-3">
-            <i class="fa-solid fa-basketball fa-2x text-blue-400"></i>
-            <div>
-                <h1 class="text-2xl font-bold tracking-wider">業餘籃球戰術大腦</h1>
-                <p class="text-slate-400 text-sm">Amateur Hoops IQ - 專為亞洲工餘聯賽打造</p>
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-basketball fa-2x text-orange-500"></i>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-wider">業餘籃球戰術大腦 <span class="text-orange-500">Pro Max</span></h1>
+                    <p class="text-slate-400 text-sm">S-F 評級系統 × 8大經典戰術 × 攻防動態推演</p>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="max-w-5xl mx-auto mt-8 px-4">
+    <main class="max-w-6xl mx-auto mt-8 px-4">
         <!-- 進度條 -->
-        <div class="flex items-center justify-center mb-8 gap-4 text-sm font-medium" id="progress-bar">
-            <!-- 由 JS 動態更新 -->
-        </div>
+        <div class="flex items-center justify-center mb-8 gap-2 md:gap-4 text-xs md:text-sm font-medium" id="progress-bar"></div>
 
-        <!-- 步驟 1 & 2: 名單與選擇 -->
-        <div id="step-1-2-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden block">
-            <div class="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center flex-wrap gap-4">
+        <!-- 步驟 1: 輸入資料 -->
+        <div id="step-1-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 md:p-6 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-xl font-bold flex items-center gap-2" id="step-title">
-                        <i class="fa-solid fa-users"></i>
-                        <span>球隊 12 人名單與能力值</span>
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-keyboard text-blue-600"></i> 輸入球隊名單與能力值 (1-99)
                     </h2>
-                    <p class="text-slate-500 text-sm mt-1" id="step-subtitle">
-                        檢視球員各項能力評級 (S=頂級, A=優秀, B=良好, C=普通, D=堪用, E=弱, F=極弱)
-                    </p>
+                    <p class="text-slate-500 text-sm mt-1">系統會自動將 1-99 的數值轉換為 S 到 F 的評級。</p>
                 </div>
-                
-                <button id="btn-next-step" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    開始排兵布陣 <i class="fa-solid fa-chevron-right"></i>
-                </button>
-                
-                <button id="btn-generate" class="hidden px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 bg-slate-200 text-slate-400 cursor-not-allowed">
-                    生成專屬戰術 <i class="fa-solid fa-play"></i>
-                </button>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="btn-autofill" class="flex-1 md:flex-none px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors text-sm">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 填入範例
+                    </button>
+                    <button id="btn-to-step2" class="flex-1 md:flex-none px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                        下一步 <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-sm text-left whitespace-nowrap">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-100">
+                        <tr>
+                            <th class="px-4 py-3 sticky-col">球員名稱 / 位置</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-bolt text-yellow-500"></i> 速度</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-heart-pulse text-red-500"></i> 體能</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-bullseye text-blue-500"></i> 外投</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-dot-circle text-cyan-500"></i> 中投</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-person-running text-orange-500"></i> 切入</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-anchor text-slate-600"></i> 籃底</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-hands-holding-circle text-purple-500"></i> 傳球</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-basketball text-orange-600"></i> 運球</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-map-location-dot text-green-600"></i> 位置感</th>
+                            <th class="px-3 py-3 text-center"><i class="fa-solid fa-brain text-pink-500"></i> 執行力</th>
+                        </tr>
+                    </thead>
+                    <tbody id="player-input-tbody">
+                        <!-- JS 動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 步驟 2: 選擇先發 -->
+        <div id="step-2-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden">
+            <div class="p-4 md:p-6 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-users text-blue-600"></i> 選擇上場的 5 名球員
+                    </h2>
+                    <p class="text-slate-500 text-sm mt-1" id="selection-count">已選擇: 0 / 5 人</p>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="btn-back-to-1" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors text-sm">
+                        返回修改
+                    </button>
+                    <button id="btn-generate" class="flex-1 md:flex-none px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 bg-slate-200 text-slate-400 cursor-not-allowed" disabled>
+                        AI 分析戰術 <i class="fa-solid fa-microchip"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 評級說明 -->
+            <div class="px-6 pt-4 flex flex-wrap gap-3 text-xs font-bold justify-center">
+                <span class="px-2 py-1 bg-fuchsia-100 text-fuchsia-700 rounded">S: 90+ (頂級)</span>
+                <span class="px-2 py-1 bg-red-100 text-red-700 rounded">A: 80-89 (優秀)</span>
+                <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded">B: 70-79 (良好)</span>
+                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded">C: 60-69 (普通)</span>
+                <span class="px-2 py-1 bg-green-100 text-green-700 rounded">D: 50-59 (堪用)</span>
+                <span class="px-2 py-1 bg-slate-200 text-slate-600 rounded">E: 40-49 (弱)</span>
+                <span class="px-2 py-1 bg-slate-300 text-slate-500 rounded">F: <40 (極弱)</span>
             </div>
 
-            <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="roster-grid">
-                    <!-- 球員卡片由 JS 動態生成 -->
+            <div class="p-4 md:p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="roster-grid">
+                    <!-- JS 動態生成球員卡片 -->
                 </div>
             </div>
         </div>
 
-        <!-- 步驟 3: 戰術動畫與解析 -->
+        <!-- 步驟 3: 戰術結果 -->
         <div id="step-3-container" class="space-y-6 hidden">
-            <!-- 戰術解說卡片 -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col lg:flex-row gap-6">
                 <div class="flex-1">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-bold mb-3">
-                        <i class="fa-solid fa-chart-line"></i> AI 陣容分析結果
+                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-bold mb-3">
+                        <i class="fa-solid fa-robot"></i> 最佳戰術匹配
                     </div>
-                    <h2 class="text-2xl font-bold text-slate-900 mb-2" id="tactic-title">載入中...</h2>
-                    <p class="text-slate-600 leading-relaxed mb-4" id="tactic-desc"></p>
+                    <h2 class="text-3xl font-bold text-slate-900 mb-2" id="tactic-title">載入中...</h2>
+                    <p class="text-slate-600 leading-relaxed mb-6" id="tactic-desc"></p>
                     
-                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                        <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center gap-1">
-                            <i class="fa-solid fa-circle-info"></i> 執行要點
-                        </h4>
-                        <ul class="text-sm text-slate-600 space-y-1 list-disc list-inside" id="tactic-points">
-                            <!-- 由 JS 動態生成 -->
-                        </ul>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                            <h4 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-pie text-blue-500"></i> 陣容優勢評級
+                            </h4>
+                            <div id="team-stats-bars" class="space-y-3">
+                                <!-- JS 生成團隊能力條 -->
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                            <h4 class="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-green-500"></i> 執行要點
+                            </h4>
+                            <ul class="text-sm text-slate-600 space-y-2 list-disc list-inside mt-3" id="tactic-points">
+                                <!-- JS 生成 -->
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="w-full md:w-64 bg-slate-50 rounded-lg p-4 border border-slate-100">
+                <div class="w-full lg:w-72 bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col">
                     <h3 class="font-bold text-slate-800 mb-3 text-center border-b border-slate-200 pb-2">場上 5 人</h3>
-                    <div class="space-y-2" id="selected-players-list">
-                        <!-- 由 JS 動態生成 -->
+                    <div class="space-y-3 flex-1" id="selected-players-list">
+                        <!-- JS 生成 -->
                     </div>
-                    <button id="btn-restart" class="w-full mt-4 py-2 bg-white border border-slate-300 rounded text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors">
+                    <button id="btn-restart" class="w-full mt-6 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 flex items-center justify-center gap-2 transition-colors shadow-sm">
                         <i class="fa-solid fa-rotate-left"></i> 重新選擇陣容
                     </button>
                 </div>
             </div>
 
-            <!-- 戰術動畫區塊 -->
+            <!-- 戰術板 -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center">
-                <h3 class="text-lg font-bold mb-6">戰術動態圖解</h3>
-                
-                <!-- 戰術板 -->
-                <div id="tactic-board" class="court-container w-full max-w-lg" data-tactic="pick_and_roll">
-                    <!-- 半場線條 -->
-                    <!-- 禁區 -->
+                <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-chalkboard text-slate-700"></i> 戰術動態圖解 (含防守方)
+                </h3>
+                <div id="tactic-board" class="court-container w-full max-w-2xl rounded-lg" data-tactic="pick_and_roll">
+                    <!-- 球場標線 -->
                     <div class="absolute top-0 left-1/2 -translate-x-1/2 border-x-4 border-b-4 border-slate-800" style="width: 32%; height: 45%;">
-                        <!-- 罰球圈 -->
                         <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-16 h-16 border-4 border-slate-800 rounded-full bg-[#fff7ed]"></div>
                     </div>
-                    <!-- 三分線 -->
                     <div class="absolute top-0 left-1/2 -translate-x-1/2 border-4 border-slate-800 border-t-0" style="width: 85%; height: 75%; border-bottom-left-radius: 50%; border-bottom-right-radius: 50%;"></div>
-                    <!-- 籃板與籃框 -->
                     <div class="absolute left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-800" style="top: 8%;"></div>
                     <div class="absolute left-1/2 -translate-x-1/2 translate-y-1.5 w-5 h-5 border-4 border-orange-500 rounded-full" style="top: 8%;"></div>
 
-                    <!-- 動畫球員與球 -->
-                    <div class="player-node bg-blue-600 p1">O1</div>
-                    <div class="player-node bg-blue-600 p2">O2</div>
-                    <div class="player-node bg-blue-600 p3">O3</div>
-                    <div class="player-node bg-blue-600 p4">O4</div>
-                    <div class="player-node bg-indigo-700 p5">O5</div>
+                    <!-- 進攻節點 (O) -->
+                    <div class="player-node bg-blue-600 o1">O1</div>
+                    <div class="player-node bg-blue-600 o2">O2</div>
+                    <div class="player-node bg-blue-600 o3">O3</div>
+                    <div class="player-node bg-blue-600 o4">O4</div>
+                    <div class="player-node bg-indigo-700 o5">O5</div>
+                    
+                    <!-- 防守節點 (X) -->
+                    <div class="defender-node x1">X1</div>
+                    <div class="defender-node x2">X2</div>
+                    <div class="defender-node x3">X3</div>
+                    <div class="defender-node x4">X4</div>
+                    <div class="defender-node x5">X5</div>
+
+                    <!-- 籃球 -->
                     <div class="ball-node"></div>
                 </div>
             </div>
@@ -208,54 +316,65 @@
     </main>
 
     <script>
-        // --- 評分轉換系統 ---
-        const gradeToNum = { S: 6, A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
+        // --- 評級系統轉換 ---
+        function getGrade(score) {
+            if (score >= 90) return { grade: 'S', desc: '頂級', color: 'text-fuchsia-600', bg: 'bg-fuchsia-500', border: 'border-fuchsia-500' };
+            if (score >= 80) return { grade: 'A', desc: '優秀', color: 'text-red-600', bg: 'bg-red-500', border: 'border-red-500' };
+            if (score >= 70) return { grade: 'B', desc: '良好', color: 'text-orange-500', bg: 'bg-orange-500', border: 'border-orange-500' };
+            if (score >= 60) return { grade: 'C', desc: '普通', color: 'text-blue-600', bg: 'bg-blue-500', border: 'border-blue-500' };
+            if (score >= 50) return { grade: 'D', desc: '堪用', color: 'text-green-600', bg: 'bg-green-500', border: 'border-green-500' };
+            if (score >= 40) return { grade: 'E', desc: '弱', color: 'text-slate-500', bg: 'bg-slate-400', border: 'border-slate-400' };
+            return { grade: 'F', desc: '極弱', color: 'text-slate-400', bg: 'bg-slate-300', border: 'border-slate-300' };
+        }
 
-        // --- 模擬球隊資料 (12人名單) ---
-        const initialRoster = [
-            { id: 1, name: '阿豪 (PG)', height: 175, weight: 70, drive: 'S', threePt: 'B', post: 'F', pass: 'A' },
-            { id: 2, name: '小宇 (SG)', height: 180, weight: 75, drive: 'C', threePt: 'S', post: 'E', pass: 'C' },
-            { id: 3, name: '建國 (SF)', height: 185, weight: 80, drive: 'B', threePt: 'C', post: 'C', pass: 'B' },
-            { id: 4, name: '大軍 (PF)', height: 190, weight: 90, drive: 'D', threePt: 'D', post: 'A', pass: 'C' },
-            { id: 5, name: '老王 (C)', height: 195, weight: 105, drive: 'F', threePt: 'F', post: 'S', pass: 'B' },
-            { id: 6, name: '阿傑 (PG/SG)', height: 178, weight: 72, drive: 'B', threePt: 'A', post: 'F', pass: 'B' },
-            { id: 7, name: '小林 (SF)', height: 183, weight: 78, drive: 'C', threePt: 'A', post: 'D', pass: 'C' },
-            { id: 8, name: '阿明 (PF/C)', height: 188, weight: 95, drive: 'D', threePt: 'E', post: 'B', pass: 'D' },
-            { id: 9, name: '志強 (SG)', height: 176, weight: 68, drive: 'B', threePt: 'B', post: 'F', pass: 'C' },
-            { id: 10, name: '大黑 (C)', height: 192, weight: 110, drive: 'F', threePt: 'F', post: 'B', pass: 'E' },
-            { id: 11, name: '阿飛 (SF)', height: 186, weight: 82, drive: 'A', threePt: 'D', post: 'C', pass: 'C' },
-            { id: 12, name: '小陳 (PG)', height: 170, weight: 65, drive: 'B', threePt: 'C', post: 'F', pass: 'S' },
+        // --- 預設範例資料 ---
+        const defaultPlayers = [
+            { name: '阿豪', pos: 'PG', speed: 85, stamina: 80, threePt: 75, mid: 82, drive: 88, post: 30, pass: 92, handle: 88, iqPos: 85, iqExec: 85 },
+            { name: '小宇', pos: 'SG', speed: 82, stamina: 78, threePt: 92, mid: 80, drive: 65, post: 25, pass: 60, handle: 70, iqPos: 88, iqExec: 75 },
+            { name: '建國', pos: 'SF', speed: 75, stamina: 85, threePt: 60, mid: 70, drive: 75, post: 65, pass: 70, handle: 65, iqPos: 75, iqExec: 80 },
+            { name: '大軍', pos: 'PF', speed: 65, stamina: 88, threePt: 40, mid: 60, drive: 55, post: 85, pass: 75, handle: 45, iqPos: 80, iqExec: 85 },
+            { name: '老王', pos: 'C',  speed: 50, stamina: 75, threePt: 20, mid: 45, drive: 40, post: 95, pass: 85, handle: 35, iqPos: 90, iqExec: 90 },
+            { name: '阿傑', pos: 'PG', speed: 92, stamina: 90, threePt: 80, mid: 75, drive: 95, post: 20, pass: 75, handle: 90, iqPos: 70, iqExec: 70 },
+            { name: '小林', pos: 'SF', speed: 78, stamina: 82, threePt: 85, mid: 75, drive: 60, post: 40, pass: 65, handle: 60, iqPos: 85, iqExec: 80 },
+            { name: '阿明', pos: 'PF', speed: 70, stamina: 80, threePt: 65, mid: 85, drive: 65, post: 75, pass: 60, handle: 55, iqPos: 75, iqExec: 75 },
+            { name: '志強', pos: 'SG', speed: 80, stamina: 75, threePt: 70, mid: 85, drive: 75, post: 35, pass: 65, handle: 75, iqPos: 70, iqExec: 70 },
+            { name: '大黑', pos: 'C',  speed: 55, stamina: 85, threePt: 15, mid: 30, drive: 45, post: 80, pass: 40, handle: 30, iqPos: 75, iqExec: 70 },
+            { name: '阿飛', pos: 'SF', speed: 88, stamina: 92, threePt: 55, mid: 65, drive: 92, post: 50, pass: 50, handle: 80, iqPos: 65, iqExec: 60 },
+            { name: '小陳', pos: 'PG', speed: 75, stamina: 70, threePt: 88, mid: 85, drive: 60, post: 15, pass: 95, handle: 90, iqPos: 92, iqExec: 95 },
         ];
 
-        // --- 狀態管理 ---
         let step = 1;
+        let playersData = Array(12).fill({}).map((_, i) => ({ name: `球員${i+1}`, pos: 'PG', speed: 50, stamina: 50, threePt: 50, mid: 50, drive: 50, post: 50, pass: 50, handle: 50, iqPos: 50, iqExec: 50 }));
         let selectedIds = [];
 
-        // --- DOM 元素 ---
+        const tbody = document.getElementById('player-input-tbody');
         const rosterGrid = document.getElementById('roster-grid');
         const progressBar = document.getElementById('progress-bar');
-        const stepTitle = document.getElementById('step-title').querySelector('span');
-        const stepSubtitle = document.getElementById('step-subtitle');
-        const btnNextStep = document.getElementById('btn-next-step');
-        const btnGenerate = document.getElementById('btn-generate');
-        const btnRestart = document.getElementById('btn-restart');
+        const countText = document.getElementById('selection-count');
         
-        const step12Container = document.getElementById('step-1-2-container');
-        const step3Container = document.getElementById('step-3-container');
-
-        // --- 初始化與渲染 ---
         function init() {
-            renderPlayers();
+            renderInputTable();
             updateUI();
             
-            // 綁定按鈕事件
-            btnNextStep.addEventListener('click', () => {
-                step = 2;
-                updateUI();
-                renderPlayers(); // 重新渲染以顯示選擇框
+            document.getElementById('btn-autofill').addEventListener('click', () => {
+                playersData = JSON.parse(JSON.stringify(defaultPlayers));
+                renderInputTable();
             });
 
-            btnGenerate.addEventListener('click', () => {
+            document.getElementById('btn-to-step2').addEventListener('click', () => {
+                saveInputData();
+                step = 2;
+                selectedIds = [];
+                updateUI();
+                renderSelectionGrid();
+            });
+
+            document.getElementById('btn-back-to-1').addEventListener('click', () => {
+                step = 1;
+                updateUI();
+            });
+
+            document.getElementById('btn-generate').addEventListener('click', () => {
                 if (selectedIds.length === 5) {
                     step = 3;
                     generateTactic();
@@ -263,193 +382,253 @@
                 }
             });
 
-            btnRestart.addEventListener('click', () => {
+            document.getElementById('btn-restart').addEventListener('click', () => {
                 step = 2;
                 selectedIds = [];
                 updateUI();
-                renderPlayers();
+                renderSelectionGrid();
             });
         }
 
-        // 渲染球員卡片
-        function renderPlayers() {
-            rosterGrid.innerHTML = '';
-            initialRoster.forEach(player => {
-                const isSelected = selectedIds.includes(player.id);
+        function renderInputTable() {
+            tbody.innerHTML = '';
+            const positions = ['PG', 'SG', 'SF', 'PF', 'C'];
+            
+            playersData.forEach((p, i) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-200 hover:bg-slate-50";
                 
-                // 判斷能力值顏色
-                const driveColor = ['S', 'A'].includes(player.drive) ? 'text-red-500' : '';
-                const threeColor = ['S', 'A'].includes(player.threePt) ? 'text-blue-500' : '';
-                const postColor = ['S', 'A'].includes(player.post) ? 'text-green-500' : '';
-                const passColor = ['S', 'A'].includes(player.pass) ? 'text-purple-500' : '';
+                let posOptions = positions.map(pos => `<option value="${pos}" ${p.pos === pos ? 'selected' : ''}>${pos}</option>`).join('');
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-2 sticky-col flex gap-2">
+                        <input type="text" id="p${i}_name" value="${p.name}" class="w-20 px-2 py-1 border rounded text-sm focus:outline-blue-500">
+                        <select id="p${i}_pos" class="w-16 px-1 py-1 border rounded text-sm focus:outline-blue-500">${posOptions}</select>
+                    </td>
+                    ${['speed', 'stamina', 'threePt', 'mid', 'drive', 'post', 'pass', 'handle', 'iqPos', 'iqExec'].map(attr => 
+                        `<td class="px-2 py-2 text-center"><input type="number" id="p${i}_${attr}" value="${p[attr]}" min="1" max="99" class="w-12 px-1 py-1 border rounded text-center text-sm focus:outline-blue-500"></td>`
+                    ).join('')}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
+        function saveInputData() {
+            for (let i = 0; i < 12; i++) {
+                playersData[i] = {
+                    id: i,
+                    name: document.getElementById(`p${i}_name`).value || `球員${i+1}`,
+                    pos: document.getElementById(`p${i}_pos`).value,
+                    speed: parseInt(document.getElementById(`p${i}_speed`).value) || 50,
+                    stamina: parseInt(document.getElementById(`p${i}_stamina`).value) || 50,
+                    threePt: parseInt(document.getElementById(`p${i}_threePt`).value) || 50,
+                    mid: parseInt(document.getElementById(`p${i}_mid`).value) || 50,
+                    drive: parseInt(document.getElementById(`p${i}_drive`).value) || 50,
+                    post: parseInt(document.getElementById(`p${i}_post`).value) || 50,
+                    pass: parseInt(document.getElementById(`p${i}_pass`).value) || 50,
+                    handle: parseInt(document.getElementById(`p${i}_handle`).value) || 50,
+                    iqPos: parseInt(document.getElementById(`p${i}_iqPos`).value) || 50,
+                    iqExec: parseInt(document.getElementById(`p${i}_iqExec`).value) || 50,
+                };
+            }
+        }
+
+        function renderSelectionGrid() {
+            rosterGrid.innerHTML = '';
+            playersData.forEach((p, i) => {
+                const isSelected = selectedIds.includes(i);
+                const ovrScore = Math.round((p.speed + p.stamina + p.threePt + p.mid + p.drive + p.post + p.pass + p.handle + p.iqPos + p.iqExec) / 10);
+                const ovrGrade = getGrade(ovrScore);
+                
                 const card = document.createElement('div');
-                card.className = `p-4 rounded-xl border-2 transition-all ${
-                    step === 2 ? 'cursor-pointer hover:shadow-md' : ''
-                } ${
-                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-100 bg-white'
+                card.className = `p-4 rounded-xl border-2 transition-all cursor-pointer hover:shadow-md ${
+                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'
                 }`;
                 
-                // 點擊事件 (僅在步驟 2 有效)
-                if (step === 2) {
-                    card.addEventListener('click', () => togglePlayer(player.id));
-                }
+                card.addEventListener('click', () => togglePlayer(i));
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h3 class="font-bold text-lg">${player.name}</h3>
-                            <p class="text-xs text-slate-500">${player.height}cm / ${player.weight}kg</p>
-                        </div>
-                        ${step === 2 ? `
-                            <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}">
-                                ${isSelected ? '<div class="w-2 h-2 bg-white rounded-full"></div>' : ''}
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold px-2 py-0.5 bg-slate-800 text-white rounded">${p.pos}</span>
+                                <h3 class="font-bold text-lg">${p.name}</h3>
                             </div>
-                        ` : ''}
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="text-xs text-slate-500 font-bold">綜合評級</span>
+                            <span class="text-2xl font-black ${ovrGrade.color}">${ovrGrade.grade}</span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-2 text-center text-xs">
-                        <div class="bg-slate-100 p-1 rounded"><span class="block text-slate-500 scale-90">切入</span><span class="font-bold ${driveColor}">${player.drive}</span></div>
-                        <div class="bg-slate-100 p-1 rounded"><span class="block text-slate-500 scale-90">三分</span><span class="font-bold ${threeColor}">${player.threePt}</span></div>
-                        <div class="bg-slate-100 p-1 rounded"><span class="block text-slate-500 scale-90">低位</span><span class="font-bold ${postColor}">${player.post}</span></div>
-                        <div class="bg-slate-100 p-1 rounded"><span class="block text-slate-500 scale-90">傳球</span><span class="font-bold ${passColor}">${player.pass}</span></div>
+                    
+                    <div class="space-y-2 mt-4">
+                        ${renderGradeBar('外投', p.threePt)}
+                        ${renderGradeBar('切入', p.drive)}
+                        ${renderGradeBar('組織', Math.round((p.pass + p.handle)/2))}
+                        ${renderGradeBar('內線', p.post)}
                     </div>
                 `;
                 rosterGrid.appendChild(card);
             });
         }
 
-        // 處理選擇球員
+        function renderGradeBar(label, val) {
+            const g = getGrade(val);
+            return `
+                <div class="flex items-center text-xs gap-2">
+                    <span class="w-8 text-slate-500 font-bold">${label}</span>
+                    <div class="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div class="h-full ${g.bg}" style="width: ${val}%"></div>
+                    </div>
+                    <span class="w-6 text-right font-black ${g.color}">${g.grade}</span>
+                </div>
+            `;
+        }
+
         function togglePlayer(id) {
             if (selectedIds.includes(id)) {
                 selectedIds = selectedIds.filter(pid => pid !== id);
             } else {
-                if (selectedIds.length < 5) {
-                    selectedIds.push(id);
-                }
+                if (selectedIds.length < 5) selectedIds.push(id);
             }
-            renderPlayers();
-            updateGenerateButton();
+            renderSelectionGrid();
             
-            // 更新副標題人數
-            if(step === 2) {
-                stepSubtitle.innerText = `已選擇: ${selectedIds.length} / 5 人`;
-            }
-        }
-
-        // 更新介面狀態 (進度條、標題、容器顯示)
-        function updateUI() {
-            // 1. 更新進度條
-            progressBar.innerHTML = `
-                <div class="flex items-center gap-2 ${step >= 1 ? 'text-blue-600' : 'text-slate-400'}">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-200'}">1</div>
-                    球隊名單
-                </div>
-                <div class="w-12 h-1 bg-slate-200 rounded"><div class="h-full bg-blue-600 rounded transition-all" style="width: ${step >= 2 ? '100%' : '0%'}"></div></div>
-                <div class="flex items-center gap-2 ${step >= 2 ? 'text-blue-600' : 'text-slate-400'}">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200'}">2</div>
-                    選擇先發 5 人
-                </div>
-                <div class="w-12 h-1 bg-slate-200 rounded"><div class="h-full bg-blue-600 rounded transition-all" style="width: ${step >= 3 ? '100%' : '0%'}"></div></div>
-                <div class="flex items-center gap-2 ${step >= 3 ? 'text-blue-600' : 'text-slate-400'}">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-slate-200'}">3</div>
-                    AI 戰術生成
-                </div>
-            `;
-
-            // 2. 切換容器顯示
-            if (step === 1 || step === 2) {
-                step12Container.classList.remove('hidden');
-                step3Container.classList.add('hidden');
-                
-                if (step === 1) {
-                    stepTitle.innerText = '球隊 12 人名單與能力值';
-                    stepSubtitle.innerText = '檢視球員各項能力評級 (S=頂級, A=優秀, B=良好, C=普通, D=堪用, E=弱, F=極弱)';
-                    btnNextStep.classList.remove('hidden');
-                    btnGenerate.classList.add('hidden');
-                } else {
-                    stepTitle.innerText = '請選擇上場的 5 名球員';
-                    stepSubtitle.innerText = `已選擇: ${selectedIds.length} / 5 人`;
-                    btnNextStep.classList.add('hidden');
-                    btnGenerate.classList.remove('hidden');
-                    updateGenerateButton();
-                }
-            } else if (step === 3) {
-                step12Container.classList.add('hidden');
-                step3Container.classList.remove('hidden');
-            }
-        }
-
-        // 更新生成按鈕狀態
-        function updateGenerateButton() {
+            countText.innerText = `已選擇: ${selectedIds.length} / 5 人`;
+            const btn = document.getElementById('btn-generate');
             if (selectedIds.length === 5) {
-                btnGenerate.className = "px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 shadow-md";
-                btnGenerate.disabled = false;
+                btn.className = "flex-1 md:flex-none px-6 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 shadow-md transform hover:scale-105";
+                btn.disabled = false;
             } else {
-                btnGenerate.className = "px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 bg-slate-200 text-slate-400 cursor-not-allowed";
-                btnGenerate.disabled = true;
+                btn.className = "flex-1 md:flex-none px-6 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 bg-slate-200 text-slate-400 cursor-not-allowed";
+                btn.disabled = true;
             }
         }
 
-        // 分析陣容並生成戰術
-        function generateTactic() {
-            const lineup = initialRoster.filter(p => selectedIds.includes(p.id));
-            
-            // 計算各項能力最高分與平均
-            const maxPost = Math.max(...lineup.map(p => gradeToNum[p.post]));
-            const maxDrive = Math.max(...lineup.map(p => gradeToNum[p.drive]));
-            const threePtAvg = lineup.reduce((sum, p) => sum + gradeToNum[p.threePt], 0) / 5;
+        function updateUI() {
+            const steps = ['輸入數據', '選擇陣容', '戰術解析'];
+            progressBar.innerHTML = steps.map((s, i) => `
+                <div class="flex items-center gap-1 md:gap-2 ${step >= i+1 ? 'text-blue-600' : 'text-slate-400'}">
+                    <div class="w-6 h-6 md:w-8 md:h-8 rounded-full flex items-center justify-center font-bold ${step >= i+1 ? 'bg-blue-600 text-white' : 'bg-slate-200'}">${i+1}</div>
+                    <span class="hidden sm:inline">${s}</span>
+                </div>
+                ${i < 2 ? `<div class="w-8 md:w-16 h-1 bg-slate-200 rounded"><div class="h-full bg-blue-600 rounded transition-all" style="width: ${step >= i+2 ? '100%' : '0%'}"></div></div>` : ''}
+            `).join('');
 
-            let tactic = 'pick_and_roll';
-            let title = '高位擋拆 (High Pick & Roll)';
-            let desc = '這套陣容的持球者與掩護者能力均衡，適合利用簡單的高位擋拆製造錯位或切入空間，是業餘聯賽最實用的基礎戰術。';
-            let points = [
-                '掩護者需確實擋住防守者 (Set a solid screen)。',
-                '持球者需緊貼掩護者切入，不留縫隙。',
-                '根據防守方的應對（換防、包夾、沉退）決定傳球或自己進攻。'
+            document.getElementById('step-1-container').classList.toggle('hidden', step !== 1);
+            document.getElementById('step-2-container').classList.toggle('hidden', step !== 2);
+            document.getElementById('step-3-container').classList.toggle('hidden', step !== 3);
+        }
+
+        function generateTactic() {
+            const lineup = selectedIds.map(id => playersData[id]);
+            
+            const avg = (attr) => lineup.reduce((sum, p) => sum + p[attr], 0) / 5;
+            const max = (attr) => Math.max(...lineup.map(p => p[attr]));
+            
+            const stats = {
+                speed: avg('speed'), stamina: avg('stamina'), threePt: avg('threePt'),
+                mid: avg('mid'), drive: avg('drive'), post: avg('post'),
+                pass: avg('pass'), handle: avg('handle'), iq: avg('iqExec') * 0.6 + avg('iqPos') * 0.4
+            };
+
+            // 8 大戰術權重計算
+            const tactics = [
+                { 
+                    id: 'pick_and_roll', name: '高位擋拆 (Pick & Roll)',
+                    score: max('handle') * 1.5 + max('pass') + max('stamina') + stats.mid,
+                    desc: '利用持球者與長人的高位掩護，迫使防守方換防或包夾，製造錯位單打或順下空檔。',
+                    points: ['掩護者需確實擋住防守者，並迅速順下 (Roll) 或外彈 (Pop)。', '持球者需緊貼掩護者切入，觀察防守者動向。', '若遭遇包夾，第一時間將球傳給順下的長人或弱側空檔。']
+                },
+                { 
+                    id: 'post_up', name: '內外結合 (Inside-Out)',
+                    score: max('post') * 2 + stats.threePt * 1.5 + stats.pass * 0.5,
+                    desc: '將球交給低位具備統治力的球員，吸引包夾後，迅速將球分給外圍埋伏的射手。',
+                    points: ['外圍球員需拉開空間 (Spacing)，將球安全交給低位優勢球員。', '低位單打時，其餘球員需適時空切或準備接球投籃。', '一旦遭遇包夾，低位球員需迅速將球傳給對角線空檔。']
+                },
+                { 
+                    id: 'drive_and_kick', name: '切入分球 (Drive & Kick)',
+                    score: max('drive') * 1.8 + stats.threePt * 1.5 + stats.speed,
+                    desc: '利用突破能力極強的箭頭撕裂防線，迫使對手協防，再分球給外線空檔。',
+                    points: ['清空一側 (Clear out) 讓切入能力強的球員單打。', '切入者需隨時觀察協防者的動向，不要盲目衝撞。', '射手需隨時準備接球投籃，接球即投 (Catch and Shoot)。']
+                },
+                { 
+                    id: 'motion', name: '動態進攻 (Motion Offense)',
+                    score: stats.iq * 2 + stats.pass * 1.5 + stats.mid + stats.stamina * 0.5,
+                    desc: '不依賴單一球星，透過不斷的無球跑動、掩護與傳導，尋找防守漏洞。',
+                    points: ['保持球的流動 (Ball movement)，不要停球超過 3 秒。', '強側傳球後，球員需立即進行無球掩護或空切 (Pass and Cut)。', '耐心尋找防守漏洞，依賴團隊默契而非個人單打。']
+                },
+                { 
+                    id: 'run_and_gun', name: '跑轟戰術 (Run & Gun)',
+                    score: stats.speed * 1.8 + stats.stamina * 1.5 + stats.threePt * 1.2,
+                    desc: '放棄複雜的半場陣地戰，利用快速攻防轉換在對方立足未穩時搶分。',
+                    points: ['抓下籃板後第一時間長傳，推動快攻。', '兩翼球員需全速奔跑至底角或 45 度角拉開空間。', '出現空檔果斷出手，即使是進攻早期 (Early Offense) 也不猶豫。']
+                },
+                { 
+                    id: 'princeton', name: '普林斯頓體系 (Princeton Offense)',
+                    score: stats.iq * 2 + stats.pass * 1.5 + max('pass') * 1.2,
+                    desc: '極度依賴空間感與傳球，以高位中鋒為策應核心，大量使用反跑 (Backdoor cut) 與無球掩護。',
+                    points: ['中鋒需具備優異的傳球視野，在高位策應。', '外圍球員需隨時觀察防守者，一旦被過度壓迫立刻反跑開後門。', '強調整體空間與球員間的默契配合。']
+                },
+                { 
+                    id: 'triangle', name: '三角戰術 (Triangle Offense)',
+                    score: stats.mid * 1.5 + stats.post * 1.5 + stats.iq,
+                    desc: '在強側建立由中鋒、前鋒、後衛組成的進攻三角，透過強弱側轉移創造單打或空檔機會。',
+                    points: ['確保強側三角的站位正確，保持適當間距。', '利用傳球將球交給位置最好的球員進行低位或中距離單打。', '弱側球員需隨時準備接應轉移球或空切。']
+                },
+                { 
+                    id: 'horns', name: '牛角戰術 (Horns)',
+                    score: max('handle') + max('mid') + max('threePt') + stats.iq,
+                    desc: '兩名內線球員站位在罰球線兩端(牛角位)，控衛在弧頂，提供多樣的掩護與擋拆選擇。',
+                    points: ['控衛可選擇任意一側的內線進行擋拆。', '擋拆後，一名內線順下 (Roll)，另一名外彈 (Pop) 拉開空間。', '兩翼射手需埋伏在底角牽制防守。']
+                }
             ];
 
-            if (maxPost >= 5) { // 有 A 或 S 級低位球員
-                tactic = 'post_up';
-                title = '內外結合 (Inside-Out / Post Up)';
-                desc = '陣容中擁有極具破壞力的內線球員。戰術核心是將球送入低位吸引包夾，再分球給外圍射手或空切球員。';
-                points = [
-                    '將球安全交給低位優勢球員。',
-                    '外圍球員需保持距離，拉開空間 (Spacing)。',
-                    '一旦遭遇包夾，低位球員需迅速將球傳給對角線空檔。'
-                ];
-            } else if (maxDrive >= 5 && threePtAvg >= 3) { // 有極強切入且外線尚可
-                tactic = 'drive_and_kick';
-                title = '切入分球 (Drive & Kick)';
-                desc = '陣容擁有突破能力極強的後衛。利用拉開空間 (Spacing) 讓後衛單打突破，吸引協防後分球給外線空檔。';
-                points = [
-                    '清空一側 (Clear out) 讓切入能力強的後衛單打。',
-                    '切入者需觀察協防者的動向。',
-                    '射手需隨時準備接球投籃，不要猶豫。'
-                ];
-            }
+            tactics.sort((a, b) => b.score - a.score);
+            const bestTactic = tactics[0];
 
-            // 更新 DOM
-            document.getElementById('tactic-title').innerText = title;
-            document.getElementById('tactic-desc').innerText = desc;
+            document.getElementById('tactic-title').innerText = bestTactic.name;
+            document.getElementById('tactic-desc').innerText = bestTactic.desc;
+            document.getElementById('tactic-points').innerHTML = bestTactic.points.map(p => `<li>${p}</li>`).join('');
             
-            const pointsHtml = points.map(p => `<li>${p}</li>`).join('');
-            document.getElementById('tactic-points').innerHTML = pointsHtml;
+            const renderTeamStat = (label, val) => {
+                const g = getGrade(val);
+                return `
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm font-bold mb-1">
+                            <span class="text-slate-600">${label}</span>
+                            <span class="${g.color}">評級 ${g.grade} <span class="text-xs font-normal text-slate-500">(${g.desc})</span></span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2.5"><div class="${g.bg} h-2.5 rounded-full stat-bar" style="width: 0%" data-width="${val}%"></div></div>
+                    </div>
+                `;
+            };
 
-            const playersHtml = lineup.map((p, i) => `
-                <div class="flex justify-between items-center text-sm">
-                    <span class="font-medium text-slate-700">O${i+1} ${p.name.split(' ')[0]}</span>
-                    <span class="text-xs text-slate-500">${p.name.split(' ')[1].replace(/[()]/g, '')}</span>
+            document.getElementById('team-stats-bars').innerHTML = 
+                renderTeamStat('團隊速度與體能', (stats.speed + stats.stamina)/2) +
+                renderTeamStat('外圍投射火力', stats.threePt) +
+                renderTeamStat('突破與內線破壞', (stats.drive + stats.post)/2) +
+                renderTeamStat('團隊球商與組織', (stats.iq + stats.pass)/2);
+
+            setTimeout(() => {
+                document.querySelectorAll('.stat-bar').forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-width');
+                });
+            }, 100);
+
+            document.getElementById('selected-players-list').innerHTML = lineup.map((p, i) => `
+                <div class="flex items-center gap-3 p-2 bg-white rounded border border-slate-100 shadow-sm">
+                    <div class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold">O${i+1}</div>
+                    <div class="flex-1">
+                        <div class="text-sm font-bold text-slate-800">${p.name}</div>
+                        <div class="text-xs text-slate-500">${p.pos}</div>
+                    </div>
                 </div>
             `).join('');
-            document.getElementById('selected-players-list').innerHTML = playersHtml;
 
-            // 切換戰術板動畫
-            document.getElementById('tactic-board').setAttribute('data-tactic', tactic);
+            document.getElementById('tactic-board').setAttribute('data-tactic', bestTactic.id);
         }
 
-        // 啟動程式
         init();
-
     </script>
 </body>
 </html>
